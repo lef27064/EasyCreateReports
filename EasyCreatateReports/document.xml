@@ -1,0 +1,181 @@
+<?xml version="1.0" ?>
+<report_project>
+  <data>
+    <entry name="protokollo" type="value">452</entry>
+    <entry name="date" type="value">15/06/2024</entry>
+    <entry name="titlos" type="value">Καθαρισμός δασικών δρόμων</entry>
+    <entry name="enotita" type="value">Λάβδανης</entry>
+    <entry name="kodikos_proypologismou" type="value">20-6279.020</entry>
+    <entry name="etos" type="value">2026</entry>
+    <entry name="xronos_eketelesis" type="value">90 ημέρες</entry>
+    <entry name="arithmos_meletis" type="value">8/26</entry>
+    <entry name="kostos" type="value">11286.01</entry>
+    <entry name="tbl_aitima" type="dict">
+      <entry name="headers" type="list">
+        <item>ΑΑ</item>
+        <item>Περιγραφή</item>
+        <item>Ποσότητα</item>
+        <item>Κόστος</item>
+      </entry>
+      <entry name="types" type="list">
+        <item>int</item>
+        <item>str</item>
+        <item>float</item>
+        <item>float</item>
+      </entry>
+      <entry name="rows" type="list">
+        <item>
+          <item>1</item>
+          <item>Καθαρισμός Δασικών Δρόμων Δ.Δ. Λάβδανης, [45343100-4] - Εργασίες πυροπροστασίας</item>
+          <item>1</item>
+          <item>11286.01</item>
+        </item>
+      </entry>
+    </entry>
+    <entry name="tbl2" type="dict">
+      <entry name="headers" type="list">
+        <item>Κωδικός</item>
+        <item>Περιγραφή</item>
+        <item>Ποσότητα</item>
+        <item>Τιμή</item>
+      </entry>
+      <entry name="rows" type="list">
+        <item>
+          <item>1</item>
+          <item>Γραφική Ύλη</item>
+          <item>10</item>
+          <item>4.5</item>
+        </item>
+        <item>
+          <item>2</item>
+          <item>Συντήρηση Εξοπλισμού</item>
+          <item>1</item>
+          <item>120.0</item>
+        </item>
+        <item>
+          <item>3</item>
+          <item>Αναλώσιμα Εκτυπωτή</item>
+          <item>3</item>
+          <item>28.5</item>
+        </item>
+      </entry>
+    </entry>
+    <entry name="tbl5" type="dict">
+      <entry name="xml_source" type="value">data.xml</entry>
+      <entry name="row_tag" type="value">row</entry>
+    </entry>
+  </data>
+  <calc>total_dapanon = sum_expression(&quot;tbl2&quot;, &quot;Ποσότητα * Τιμή&quot;)
+plithos = len(tbl2[&quot;rows&quot;])
+mesos_oros = total_dapanon / plithos</calc>
+  <commons>
+    <common name="header_block">&lt;div class=&quot;header-container&quot;&gt;
+    &lt;table class=&quot;header-table&quot;&gt;
+        &lt;tr&gt;
+            &lt;td class=&quot;header-left&quot;&gt;
+            &lt;img src=&quot;logo.png&quot; alt=&quot;Δήμος Πωγωνίου&quot; class=&quot;header-logo&quot;&gt;
+               &lt;p&gt;ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ&lt;/p&gt;
+                &lt;p&gt;ΝΟΜΟΣ ΙΩΑΝΝΙΝΩΝ&lt;/p&gt;
+                &lt;p&gt;ΔΗΜΟΣ ΠΩΓΩΝΙΟΥ&lt;/p&gt;
+                &lt;p&gt;Τμήμα Περιβάλλοντος &amp; Πολεοδομίας&lt;/p&gt;
+                &lt;p&gt;Πληρ. Λάμπρου Ελευθέριος&lt;/p&gt;
+                &lt;p&gt;Tηλ: 26533-60113&lt;/p&gt;
+                &lt;p&gt;e-mail:lamele@pogoni.gr&lt;/p&gt;
+            &lt;/td&gt;
+            &lt;td class=&quot;header-right&quot;&gt;
+                &lt;p&gt;&lt;strong&gt;Ημερομηνία:&lt;/strong&gt; $date$&lt;/p&gt;
+                &lt;p&gt;&lt;strong&gt;Αρ. Πρωτοκόλλου:&lt;/strong&gt; $protokollo$/Α&lt;/p&gt;
+                &lt;p&gt;&lt;strong&gt;ΠΡΟΣ:&lt;/strong&gt;1.	Γραφείο Προμηθειών, Υλικού εξοπλισμού, Υπηρεσιών Δήμου Πωγωνίου&lt;/p&gt;
+                &lt;p&gt;2.	Δήμαρχο Δήμο Πωγωνίου &lt;/p&gt;
+            &lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/table&gt;
+&lt;/div&gt;</common>
+    <common name="footer_block">---
+*Το παρόν έγγραφο παράγεται αυτόματα από το σύστημα διαχείρισης δαπανών.*</common>
+  </commons>
+  <outputs>
+    <output filename="report_diavivastiko.html">$header_block$
+&lt;br&gt;
+&lt;br&gt;
+**Θέμα**: Αποστολή τεχνικής περιγραφής με τίτλο:  $titlos$ $enotita$.
+&lt;u&gt;Σχετ.&lt;/u&gt; α. Προφορική εντολή Δημάρχου
+&lt;br&gt;
+	  
+Κατόπιν του (α) σχετικού, σας αποστέλλεται η τεχνική περιγραφή που αφορά την εργασία του θέματος, προκειμένου να προχωρήσετε στην υλοποίησή της. 
+
+Είμαστε στην διάθεσή σας για την κάθε παροχή πληροφοριών – διευκρινίσεων. 
+
+&lt;div style=&quot;text-align: center;&quot;&gt;
+&lt;p&gt;
+Ο Αρμόδιος υπάλληλος
+&lt;br&gt;&lt;br&gt;&lt;br&gt;
+Ελευθέριος Λάμπρου
+&lt;/p&gt;
+&lt;/div&gt;</output>
+    <output filename="report_aitima.html">$header_block$
+&lt;br&gt;
+&lt;br&gt;
+**Θέμα**: Υποβολή αιτήματος για παροχή υπηρεσιών   $titlos$ $enotita$ (Κ.Α.$kodikos_proypologismou$).
+&lt;br&gt;
+	  
+Με την παρούσα αίτηση σας γνωρίζουμε ότι οι υπηρεσίες του Δήμου, έχουν την ανάγκη ανάθεσης της υπηρεσίας του τίτλου  λόγω του ότι ο Δήμος δεν διαθέτει ούτε τις υποδομές 
+(μηχανήματα έργου)  αλλά ούτε και το ανάλογο προσωπικό για την πραγματοποίηση της υπηρεσίας.
+** Α. Περιγραφή των προς παροχή υπηρεσιών -ενδεικτικός προϋπολογισμός: **
+@detail table{name=&quot;tbl_aitima&quot;, title=&quot;&quot;, select=&quot;ΑΑ, Περιγραφή, Ποσότητα, Κόστος, Ποσότητα * Κόστος * 0.24 AS ΦΠΑ, Ποσότητα * Κόστος * 1.24 AS Συνολικό&quot;, totals=&quot;Συνολικό: Euro&quot;}
+** Β. Επιθυμητή ημερομηνία εκτέλεσης των παρεχομένων υπηρεσιών: **
+- Από την ημερομηνία ανάθεσης και σε διάστημα $xronos_eketelesis$.
+
+Τέλος, θα θέλαμε να σας γνωρίσουμε ότι, έχει συνταχθεί η υπ. αριθμ. $arithmos_meletis$  τεχνική περιγραφή για την εκτίμηση του κόστους αλλά και την προδιαγραφή της υπηρεσίας.
+
+&lt;div style=&quot;text-align: center;&quot;&gt;
+&lt;p&gt;
+Ο Δημάρχος
+&lt;br&gt;&lt;br&gt;&lt;br&gt;
+Καψάλης Κωνσταντίνος
+&lt;/p&gt;
+&lt;/div&gt;</output>
+    <output filename="meleti.html">&lt;div style=&quot;text-align: center;&quot;&gt;
+
+# ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ
+# ΝΟΜΟΣ ΙΩΑΝΝΙΝΩΝ
+# ΔΗΜΟΣ ΠΩΓΩΝΙΟΥ
+# ΤΜΗΜΑ ΠΕΡΙΒΑΛΛΟΝΤΟΣ &amp; ΠΟΛΕΟΔΟΜΙΑΣ
+&lt;br&gt;
+## ΑΡ. ΜΕΛΕΤΗΣ: 8/26
+&lt;br&gt;
+# ΠΑΡΟΧΗ ΥΠΗΡΕΣΙΩΝ (ΕΡΓΑΣΙΑΣ): $titlos$ $enotita$.
+&lt;br&gt;
+## Κ.Α. ΠΡΟΥΠΟΛΟΓΙΣΜΟΥ   :20-6279.020
+## ΠΟΣΟ Κ.Α. 6.875,00
+## ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ  :6.857,20
+&lt;br&gt;
+# ΤΕΧΝΙΚΗ ΠΕΡΙΓΡΑΦΗ - ΤΕΧΝΙΚΕΣ ΠΡΟΔΙΑΓΡΑΦΕΣ ΕΡΓΑΣΙΑΣ
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+# ΜΑΙΟΣ 2026
+&lt;/div&gt;
+&lt;div class=&quot;page-break&quot;&gt;&lt;/div&gt;
+
+---
+
+## Αναλυτική Εκκαθάριση
+
+@detail table{name=&quot;tbl2&quot;, title=&quot;Είδη με Ποσότητα &gt; 2&quot;, select=&quot;Κωδικός, Περιγραφή, Ποσότητα where Ποσότητα &gt; 2&quot;, totals=&quot;Ποσότητα: τεμ&quot;}
+---
+*Παρακαλούμε για την έκδοση του σχετικού εντάλματος πληρωμής.*
+
+$footer_block$</output>
+    <output filename="report_ergazomenos.html"># Βεβαίωση Υποβολής Αίτησης Δαπανών
+
+Βεβαιώνεται ότι ο υπάλληλος **$ypallilos$** υπέβαλε αίτημα αποζημίωσης δαπανών με αριθμό πρωτοκόλλου **$protokollo$**.
+
+### Σύνοψη Αίτησης:
+* **Τμήμα:** $tmima$
+* **Συνολικό Αιτούμενο Ποσό:** $total_dapanon$ €
+* **Πλήθος Δικαιολογητικών:** $plithos$
+
+$footer_block$</output>
+  </outputs>
+</report_project>
