@@ -7,6 +7,7 @@ from engine_math import SAFE_MATH_DICT, create_sum_expression
 from engine_data import load_xml_data
 from engine_converter import txt_to_xml
 from engine_pdf import convert_html_to_pdf
+from engine_dates import get_dates_env
 
 
 # Αρχικοποίηση τοπικών ρυθμίσεων από το ΛΣ
@@ -80,6 +81,10 @@ def compile_document(input_filepath):
     calc_env["sum_expression"] = sum_expr
     calc_env["fmt"] = fmt
     
+    # --- ΦΟΡΤΩΣΗ ΑΥΤΟΜΑΤΩΝ ΗΜΕΡΟΜΗΝΙΩΝ ΑΠΟ ΤΟ ENGINE_DATES ---
+    calc_env.update(get_dates_env())
+    # ---------------------------------------------------------
+
     if calc_match:
         exec(calc_match.group(1), {}, calc_env)
         
