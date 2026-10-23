@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c046951a-75ca-4d4f-a010-a5852c7a28d6</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>EasyCreateReports.py</StartupFile>
+    <StartupFile>app_gui.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,6 +21,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="app_gui.py" />
+    <Compile Include="core_engine.py" />
     <Compile Include="EasyCreateReports.py" />
     <Compile Include="engine_converter.py" />
     <Compile Include="engine_data.py" />

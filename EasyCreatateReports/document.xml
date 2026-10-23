@@ -36,6 +36,31 @@
         </item>
       </entry>
     </entry>
+    <entry name="tbl_meleti" type="dict">
+      <entry name="headers" type="list">
+        <item>Α/Α</item>
+        <item>Περιγραφή</item>
+        <item>μ.μ.</item>
+        <item>dapani</item>
+        <item>Ποσότητα</item>
+      </entry>
+      <entry name="types" type="list">
+        <item>int</item>
+        <item>str</item>
+        <item>str</item>
+        <item>float</item>
+        <item>float</item>
+      </entry>
+      <entry name="rows" type="list">
+        <item>
+          <item>1</item>
+          <item>Μίσθωση κατάλληλου Μηχανήματος (φορτωτής JCB) για τον καθαρισμό των δασικών δρόμων</item>
+          <item>Ωρα</item>
+          <item>35.0</item>
+          <item>158.0</item>
+        </item>
+      </entry>
+    </entry>
     <entry name="tbl2" type="dict">
       <entry name="headers" type="list">
         <item>Κωδικός</item>
@@ -207,28 +232,13 @@ $mayor_signature$</output>
 
 Η ανάθεση της εργασίας θα γίνει σύμφωνα με τις διατάξεις του Ν.4412/2016 (ΦΕΚ 147/08.08.2016 τεύχος Α’) όπως ισχύει [Νόμος 4782/2021 &quot;Εκσυγχρονισμός, απλοποίηση και αναμόρφωση του ρυθμιστικού πλαισίου των δημοσίων συμβάσεων, ειδικότερες ρυθμίσεις προμηθειών στους τομείς της άμυνας και της ασφάλειας και άλλες διατάξεις για την ανάπτυξη, τις υποδομές και την υγεία&quot;]
 
+$employee_signature$
 
-Ο Συντάξας
+&lt;div class=&quot;page-break&quot;&gt;&lt;/div&gt;
 
-Λάμπρου Ελευθέριος
-
-
-
-
-@detail table{name=&quot;tbl2&quot;, title=&quot;Είδη με Ποσότητα &gt; 2&quot;, select=&quot;Κωδικός, Περιγραφή, Ποσότητα where Ποσότητα &gt; 2&quot;, totals=&quot;Ποσότητα: τεμ&quot;}
----
-*Παρακαλούμε για την έκδοση του σχετικού εντάλματος πληρωμής.*
-
-$footer_block$</output>
-    <output filename="report_ergazomenos.html"># Βεβαίωση Υποβολής Αίτησης Δαπανών
-
-Βεβαιώνεται ότι ο υπάλληλος **$ypallilos$** υπέβαλε αίτημα αποζημίωσης δαπανών με αριθμό πρωτοκόλλου **$protokollo$**.
-
-### Σύνοψη Αίτησης:
-* **Τμήμα:** $tmima$
-* **Συνολικό Αιτούμενο Ποσό:** $total_dapanon$ €
-* **Πλήθος Δικαιολογητικών:** $plithos$
-
-$footer_block$</output>
+# 1.2 	ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ 
+@detail table{name=&quot;tbl_meleti&quot;, title=&quot;Α. Περιγραφή των προς παροχή υπηρεσιών - ενδεικτικός προϋπολογισμός:&quot;, select=&quot;Α/Α, Περιγραφή, μ.μ., dapani AS Δαπάνη / μ.μ., Ποσότητα, dapani * Ποσότητα AS Μερική Δαπάνη&quot;, totals=&quot;Μερική Δαπάνη: €&quot;, vat=&quot;0.24&quot;}
+$employee_signature$
+&lt;div class=&quot;page-break&quot;&gt;&lt;/div&gt;</output>
   </outputs>
 </report_project>

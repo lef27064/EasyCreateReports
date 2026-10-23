@@ -1,14 +1,13 @@
-﻿import yaml
-import re
+﻿import re
 import os
 import locale
+import yaml
 from md_dictionary import MARKDOWN_RULES
 from engine_math import SAFE_MATH_DICT, create_sum_expression
 from engine_data import load_xml_data
 from engine_converter import txt_to_xml
 from engine_pdf import convert_html_to_pdf
 from engine_dates import get_dates_env
-
 
 # Αρχικοποίηση τοπικών ρυθμίσεων από το ΛΣ
 try:
@@ -122,13 +121,25 @@ def compile_document(input_filepath):
             title_match = re.search(r'title="([^"]+)"', content_inside)
             tbl_title = title_match.group(1) if title_match else ""
             
-            table_data = data_env.get(tbl_name, {})
-            orig_headers = list(table_data.get("headers", []))
-            headers = list(orig_headers)
-            rows = [list(r) for r in table_data.get("rows", [])]
-            column_types = table_data.get("types", [])
+            vat_match = re.search(r'vat="([^"]+)"', content_inside)
+            vat_rate = float(vat_match.group(1)) if vat_match else 0.0
             
-            if not rows:
+            table_data = data_env.get(tbl_name, {})
+            
+            if isinstance(table_data, list):
+                if not table_data:
+                    return f"<!-- Ο πίνακας {tbl_name} είναι κενός -->"
+                orig_headers = list(table_data[0].keys())
+                rows = [[row.get(h, "") for h in orig_headers] for row in table_data]
+                column_types = []
+            else:
+                orig_headers = list(table_data.get("headers", []))
+                rows = [list(r) for r in table_data.get("rows", [])]
+                column_types = table_data.get("types", [])
+                
+            headers = list(orig_headers)
+            
+            if not rows and not orig_headers:
                 return f"<!-- Ο πίνακας {tbl_name} δεν βρέθηκε ή είναι κενός -->"
 
             # --- ΜΗΧΑΝΙΣΜΟΣ SELECT / WHERE & CALCULATIONS ---
@@ -144,8 +155,7 @@ def compile_document(input_filepath):
                     sel_cols_str = select_query
                     where_cond = None
                 
-                # 1. Φιλτράρισμα γραμμών (WHERE condition)
-                if where_cond:
+                if where_cond and orig_headers:
                     filtered_rows = []
                     for row in rows:
                         try:
@@ -155,44 +165,39 @@ def compile_document(input_filepath):
                                     local_env[h] = float(row[idx])
                                 except (ValueError, TypeError):
                                     local_env[h] = row[idx]
-                            
                             if eval(where_cond, {"__builtins__": {}}, local_env):
                                 filtered_rows.append(row)
                         except Exception:
                             pass
                     rows = filtered_rows
 
-                # 2. Επεξεργασία στηλών, πράξεων και AS aliases
-                if sel_cols_str != "*":
+                if sel_cols_str != "*" and orig_headers:
                     requested_items = [item.strip() for item in sel_cols_str.split(',')]
                     new_rows = []
                     new_headers = []
                     
                     for row in rows:
-                        # Δημιουργία περιβάλλοντος για κάθε γραμμή με βάση τα αρχικά headers
                         row_dict = SAFE_MATH_DICT.copy()
                         for idx, h in enumerate(orig_headers):
                             try:
                                 row_dict[h] = float(row[idx])
                             except (ValueError, TypeError):
                                 row_dict[h] = row[idx]
-                        
+                    
                         new_row_values = []
                         row_headers = []
                         
                         for item in requested_items:
-                            # Έλεγχος αν υπάρχει alias (π.χ. ... AS ΦΠΑ)
                             if re.search(r'\s+AS\s+', item, flags=re.IGNORECASE):
                                 expr, alias = re.split(r'\s+AS\s+', item, maxsplit=1, flags=re.IGNORECASE)
                                 expr = expr.strip()
                                 alias = alias.strip()
                                 if alias not in row_headers:
                                     row_headers.append(alias)
-                                
                                 try:
                                     val = eval(expr, {"__builtins__": {}}, row_dict)
                                     new_row_values.append(val)
-                                    row_dict[alias] = val  # Αποθήκευση για επόμενες πιθανές πράξεις
+                                    row_dict[alias] = val
                                 except Exception:
                                     new_row_values.append(0.0)
                                     row_dict[alias] = 0.0
@@ -202,7 +207,6 @@ def compile_document(input_filepath):
                                 val = row_dict.get(item, 0.0)
                                 new_row_values.append(val)
                             else:
-                                # Αν είναι απευθείας μαθηματική έκφραση χωρίς AS
                                 expr = item
                                 if expr not in row_headers:
                                     row_headers.append(expr)
@@ -220,10 +224,8 @@ def compile_document(input_filepath):
                     
                     headers = new_headers
                     rows = new_rows
-            # ------------------------------------------------
-                
+
             calc_blocks = re.findall(r'calc\d*=\s*\((.*?)\)', content_inside)
-            
             for block in calc_blocks:
                 name_m = re.search(r'name\s*=\s*["\']([^"\']+)["\']', block)
                 form_m = re.search(r'formula\s*=\s*["\']([^"\']+)["\']', block)
@@ -242,12 +244,6 @@ def compile_document(input_filepath):
                                 except (ValueError, TypeError):
                                     local_env[h] = 0.0
                             
-                            for extra_idx, extra_h in enumerate(headers[len(orig_headers):-1]):
-                                try:
-                                    local_env[extra_h] = float(row[len(orig_headers) + extra_idx])
-                                except (ValueError, TypeError, IndexError):
-                                    pass
-
                             val = eval(formula, {"__builtins__": {}}, local_env)
                             row.append(float(val))
                         except Exception:
@@ -273,8 +269,8 @@ def compile_document(input_filepath):
             html = []
             if tbl_title:
                 html.append(f"<h3>{tbl_title}</h3>")
-            html.append('<table class="printable-table">')
-            html.append("<thead><tr>" + "".join(f"<th>{h}</th>" for h in visible_headers) + "</tr></thead>")
+            html.append('<table class="printable-table" border="1" style="width:100%; border-collapse:collapse;">')
+            html.append("<thead><tr style='background-color:#f2f2f2;'>" + "".join(f"<th style='padding:8px;'>{h}</th>" for h in visible_headers) + "</tr></thead>")
             html.append("<tbody>")
             
             col_sums = {h: 0.0 for h in visible_headers}
@@ -288,9 +284,8 @@ def compile_document(input_filepath):
 
                 visible_row = []
                 for idx, (i, h) in enumerate(zip(visible_indices, visible_headers)):
-                    val = row[i]
+                    val = row[i] if i < len(row) else ""
                     
-                    # Προσδιορισμός τύπου στήλης (βάσει της λίστας types)
                     col_type = None
                     if idx < len(column_types):
                         t_val = column_types[idx]
@@ -314,24 +309,25 @@ def compile_document(input_filepath):
                     else:
                         visible_row.append(str(val))
 
-                html.append("<tr>" + "".join(f"<td>{c}</td>" for c in visible_row) + "</tr>")
+                html.append("<tr>" + "".join(f"<td style='padding:6px; text-align:center;'>{c}</td>" for c in visible_row) + "</tr>")
                     
+            # --- ΔΗΜΙΟΥΡΓΙΑ ΕΠΙΠΛΕΟΝ ΓΡΑΜΜΩΝ (Σύνολο, ΦΠΑ, Τελικό) ---
             if column_units:
-                total_row = []
-                has_any_total = False
-                for h in visible_headers:
-                    if h in column_units:
-                        unit = column_units[h]
-                        total_row.append(f"<strong>{fmt(col_sums[h])} {unit}</strong>".strip())
-                        has_any_total = True
-                    elif h == visible_headers[0]:
-                        total_row.append("<strong>Σύνολο</strong>")
-                    else:
-                        total_row.append("")
+                colspan = len(visible_headers) - 1
+                total_col_key = list(column_units.keys())[0]
+                subtotal_val = col_sums.get(total_col_key, 0.0)
+                unit = column_units[total_col_key]
+
+                html.append(f"<tr><td colspan='{colspan}' style='text-align:right; font-weight:bold; padding:8px;'>Σύνολο Δαπάνης:</td><td style='text-align:center; font-weight:bold; padding:8px;'>{fmt(subtotal_val)} {unit}</td></tr>")
                 
-                if has_any_total:
-                    html.append("<tr class='table-total'>" + "".join(f"<td>{c}</td>" for c in total_row) + "</tr>")
-                
+                if vat_rate > 0:
+                    vat_val = subtotal_val * vat_rate
+                    grand_total = subtotal_val + vat_val
+                    vat_percent = int(vat_rate * 100)
+                    
+                    html.append(f"<tr><td colspan='{colspan}' style='text-align:right; font-weight:bold; padding:8px;'>Φ.Π.Α. {vat_percent}%:</td><td style='text-align:center; font-weight:bold; padding:8px;'>{fmt(vat_val)} {unit}</td></tr>")
+                    html.append(f"<tr style='background-color:#e6f2ff;'><td colspan='{colspan}' style='text-align:right; font-weight:bold; padding:8px;'>Σύνολο Σύμβασης:</td><td style='text-align:center; font-weight:bold; padding:8px;'>{fmt(grand_total)} {unit}</td></tr>")
+
             html.append("</tbody></table>")
             return "\n".join(html)
 
@@ -432,7 +428,6 @@ def compile_document(input_filepath):
             
         print(f"Δημιουργήθηκε επιτυχώς: {output_filename}")
         
-        # Αυτόματη παραγωγή του αντίστοιχου PDF από το HTML
         pdf_filename = os.path.splitext(output_filename)[0] + ".pdf"
         convert_html_to_pdf(output_filename, pdf_filename)
 
