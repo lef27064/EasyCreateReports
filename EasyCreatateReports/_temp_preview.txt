@@ -13,7 +13,7 @@ poso_ka: 11286.01
 etos: 2026
 xronos_eketelesis: 90 ημέρες
 arithmos_meletis: 8/26
-proypologismos: 11286.55
+proypologismos: 11286.01
 apofasi_DS: 28/2026
 
 tbl_aitima:
@@ -186,8 +186,8 @@ $mayor_signature$
 # ΠΑΡΟΧΗ ΥΠΗΡΕΣΙΩΝ (ΕΡΓΑΣΙΑΣ): $titlos$ $enotita$.
 <br>
 ## Κ.Α. ΠΡΟΥΠΟΛΟΓΙΣΜΟΥ   :$kodikos_proypologismou$
-## ΠΟΣΟ Κ.Α. $poso_ka:.0$
-## ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ  :$proypologismos:.0$
+## ΠΟΣΟ Κ.Α. $poso_ka$
+## ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ  :$proypologismos$
 
 <br>
 # ΤΕΧΝΙΚΗ ΠΕΡΙΓΡΑΦΗ - ΤΕΧΝΙΚΕΣ ΠΡΟΔΙΑΓΡΑΦΕΣ ΕΡΓΑΣΙΑΣ

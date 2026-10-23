@@ -70,6 +70,10 @@ class ReportDesignerApp(QMainWindow):
         self.editor = QTextEdit()
         self.editor.setFontFamily("Consolas")
         self.editor.setFontPointSize(11)
+        # --- ΕΝΕΡΓΟΠΟΙΗΣΗ ΔΕΞΙΟΥ ΚΛΙΚ ΓΙΑ ΣΥΓΧΡΟΝΙΣΜΟ ---
+        self.editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.editor.customContextMenuRequested.connect(self.show_editor_context_menu)
+        # ------------------------------------------------
         left_layout.addWidget(self.editor)
 
         # Δεξί Παράθυρο (Preview)
@@ -180,6 +184,39 @@ tbl_meleti:
                 QMessageBox.information(self, "Επιτυχία", f"Το αρχείο αποθηκεύτηκε στο:\n{file_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Σφάλμα", f"Σφάλμα αποθήκευσης:\n{e}")
+
+    def show_editor_context_menu(self, pos):
+        """Δημιουργεί προσαρμοσμένο δεξί κλικ στον editor με επιλογή συγχρονισμού."""
+        menu = self.editor.createStandardContextMenu()
+        menu.addSeparator()
+        jump_action = menu.addAction("📍 Μετάβαση σε αυτό το σημείο στην προεπισκόπηση")
+        jump_action.triggered.connect(self.jump_preview_to_cursor)
+        menu.exec(self.editor.mapToGlobal(pos))
+
+    def jump_preview_to_cursor(self):
+        """Εντοπίζει την πλησιέστερη ενότητα στον κέρσορα και κάνει scroll στο preview."""
+        cursor = self.editor.textCursor()
+        block_number = cursor.blockNumber()
+        
+        raw_text = self.editor.toPlainText()
+        lines = raw_text.split('\n')
+        
+        # Μετράμε πόσες επικεφαλίδες (#) υπάρχουν από την αρχή μέχρι τη γραμμή του κέρσορα
+        header_count = 0
+        for i in range(min(block_number + 1, len(lines))):
+            if lines[i].strip().startswith('#'):
+                header_count += 1
+                
+        target_id_index = max(0, header_count - 1)
+        
+        # Εκτέλεση JavaScript στο QWebEngineView για ομαλή κύλιση
+        js_code = f"""
+        var el = document.getElementById('sec-{target_id_index}');
+        if (el) {{
+            el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+        }}
+        """
+        self.web_view.page().runJavaScript(js_code)
 
     def export_report_files(self):
         """Εκτελεί την παραγωγή και αποθήκευση των ξεχωριστών HTML αρχείων και PDF στον δίσκο."""

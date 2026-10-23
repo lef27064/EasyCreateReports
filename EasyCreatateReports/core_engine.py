@@ -397,7 +397,8 @@ def _process_body_text(body_text, data_env):
         lines = text.split('\n')
         parsed_lines = []
         in_list = False
-        
+        h_index = 0  # Μετρητής για μοναδικά IDs στις επικεφαλίδες
+
         for line in lines:
             line_str = line.strip()
             
@@ -425,7 +426,9 @@ def _process_body_text(body_text, data_env):
                     header_content = h_match.group(2)
                     header_content = re.sub(MARKDOWN_RULES['bold']['pattern'], MARKDOWN_RULES['bold']['replacement'], header_content)
                     header_content = re.sub(MARKDOWN_RULES['italic']['pattern'], MARKDOWN_RULES['italic']['replacement'], header_content)
-                    parsed_lines.append(f'<h{level}>{header_content}</h{level}>')
+                    # Προσθήκη μοναδικού id για συγχρονισμό κύλισης
+                    parsed_lines.append(f'<h{level} id="sec-{h_index}">{header_content}</h{level}>')
+                    h_index += 1
                     continue
 
             if line_str.startswith('>'):
@@ -466,25 +469,28 @@ def _process_body_text(body_text, data_env):
 
 
 def compile_for_preview(input_filepath):
-    """MODE 1: IN-MEMORY (Προεπισκόπηση) - Συνενώνει όλα τα blocks χωρίς να σώζει τίποτα στον δίσκο."""
+    """MODE 1: IN-MEMORY (Προεπισκόπηση) - Συγκεντρώνει αποκλειστικά τα @output blocks χωρίς διπλοεγγραφές."""
     content, data_env, css_content = _prepare_environment(input_filepath)
 
+    # Εντοπισμός όλων των @output blocks
     output_blocks = re.findall(r'@output\s*["\']([^"\']+)["\']\s*(.*?)\s*@end', content, re.DOTALL)
     
-    if not output_blocks:
-        body_match = re.search(r'@body\s*(.*?)$', content, re.DOTALL)
-        if body_match:
-            b_text = body_match.group(1).strip()
-            if b_text.endswith('@end'):
-                b_text = b_text[:-4].strip()
-            output_blocks = [("report.html", b_text)]
-        else:
-            output_blocks = [("report.html", content)]
-
-    # Συνένωση όλων των τμημάτων με μια οριζόντια γραμμή διαχωρισμού για την προεπισκόπηση
-    combined_body = "\n<hr style='margin: 40px 0; border: 1px dashed #ccc;'>\n".join(
-        _process_body_text(raw_body, data_env) for _, raw_body in output_blocks
-    )
+    if output_blocks:
+        extracted_sections = []
+        for output_filename, raw_body in output_blocks:
+            processed_body = _process_body_text(raw_body, data_env)
+            extracted_sections.append(processed_body)
+        
+        # Συνένωση των τμημάτων των @output blocks ακριβώς μία φορά
+        combined_body = "\n<hr style='margin: 40px 0; border: 1px dashed #ccc;'>\n".join(extracted_sections)
+    else:
+        # Fallback: Αν δεν υπάρχουν @output blocks, καθαρίζουμε τα control blocks και παίρνουμε το σώμα
+        body_text = content
+        body_text = re.sub(r'@config\s*.*?\s*@end', '', body_text, flags=re.DOTALL)
+        body_text = re.sub(r'@data\s*.*?\s*@end', '', body_text, flags=re.DOTALL)
+        body_text = re.sub(r'@calc\s*.*?\s*@end', '', body_text, flags=re.DOTALL)
+        body_text = re.sub(r'@common\s+[a-zA-Z0-9_]+\s*.*?\s*@end', '', body_text, flags=re.DOTALL)
+        combined_body = _process_body_text(body_text, data_env)
 
     full_html = f"""<!DOCTYPE html>
 <html lang="el">
