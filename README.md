@@ -91,3 +91,6 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 License
 This project is open-source and available under the MIT License.
+
+## 🤖 Credits & Acknowledgments
+The development of the core engine features, interactive UI synchronization, documentation, and installation scripts for EasyCreateReports was co-created and structured with the assistance of **Gemini** (Personal AI Collaborator).
