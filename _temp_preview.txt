@@ -230,9 +230,8 @@ $employee_signature$
 # 1.2 	ΠΡΟΥΠΟΛΟΓΙΣΜΟΣ 
 @detail table{name="tbl_meleti", title="Α. Περιγραφή των προς παροχή υπηρεσιών - ενδεικτικός προϋπολογισμός:", select="Α/Α, Περιγραφή, μ.μ., dapani AS Δαπάνη / μ.μ., Ποσότητα, dapani * Ποσότητα AS Μερική Δαπάνη", totals="Μερική Δαπάνη: €", vat="0.24"}
 $employee_signature$
-//@detail table{name="tbl_apo_csv", title="Αναλυτικά Στοιχεία από CSV"}
-
 <div class="page-break"></div>
 
+@detail table{name="tbl_apo_csv", title="Αναλυτικά Στοιχεία από CSV"}
 
 @end
