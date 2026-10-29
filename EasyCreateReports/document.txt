@@ -39,6 +39,10 @@ tbl5:
   xml_source: "data.xml"
   row_tag: "row"
 
+tbl_apo_csv:
+  csv_source: "dedomena.csv"
+  delimiter: ";"
+
 @end
 
 @calc
@@ -228,5 +232,6 @@ $employee_signature$
 $employee_signature$
 <div class="page-break"></div>
 
+@detail table{name="tbl_apo_csv", title="Αναλυτικά Στοιχεία από CSV"}
 
 @end

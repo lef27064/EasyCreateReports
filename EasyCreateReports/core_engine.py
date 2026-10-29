@@ -42,6 +42,72 @@ def _evaluate_expressions(data):
             return data
     return data
 
+import csv
+import os
+
+def process_csv_sources(data_env):
+    """
+    Εντοπίζει στο data_env αν υπάρχουν πίνακες που ορίζονται μέσω csv_source
+    και φορτώνει τα δεδομένα τους αυτόματα στη δομή του πίνακα.
+    """
+    for key, value in list(data_env.items()):
+        if isinstance(value, dict) and "csv_source" in value:
+            filename = value["csv_source"]
+            delimiter = value.get("delimiter", ",")
+            
+            headers = []
+            rows = []
+            
+            try:
+                # Υποθέτουμε ότι το CSV βρίσκεται στον ίδιο φάκελο με το project
+                if os.path.exists(filename):
+                    with open(filename, mode="r", encoding="utf-8-sig") as f:
+                        reader = csv.reader(f, delimiter=delimiter)
+                        all_lines = list(reader)
+                        
+                        if all_lines:
+                            # Η πρώτη γραμμή είναι οι επικεφαλίδες
+                            headers = [h.strip() for h in all_lines[0]]
+                            
+                            # Οι επόμενες γραμμές είναι τα δεδομένα
+                            for line in all_lines[1:]:
+                                parsed_row = []
+                                for val in line:
+                                    val_str = val.strip()
+                                    
+                                    # Αν είναι κενό, το αφήνουμε κενό string
+                                    if not val_str:
+                                        parsed_row.append("")
+                                        continue
+                                        
+                                    # Προσπάθεια αυτόματης μετατροπής σε αριθμό
+                                    parsed_val = val_str
+                                    try:
+                                        if "." in val_str or "," in val_str:
+                                            # Αντικατάσταση κόμματος με τελεία για τα δεκαδικά
+                                            parsed_val = float(val_str.replace(",", "."))
+                                        else:
+                                            parsed_val = int(val_str)
+                                    except ValueError:
+                                        # Αν δεν είναι αριθμός, δοκιμάζουμε αν είναι καθαρό float με τελεία
+                                        try:
+                                            parsed_val = float(val_str)
+                                        except ValueError:
+                                            parsed_val = val_str
+                                            
+                                    parsed_row.append(parsed_val)
+                                rows.append(parsed_row)
+                                
+                    # Ενημερώνουμε το περιβάλλον δεδομένων με τη μορφή πίνακα που αναγνωρίζει ο engine
+                    data_env[key] = {
+                        "headers": headers,
+                        "rows": rows
+                    }
+                    print(f"[CSV LOADER]: Φορτώθηκε επιτυχώς το αρχείο '{filename}' με {len(rows)} γραμμές.")
+                else:
+                    print(f"[CSV ERROR]: Το αρχείο '{filename}' δεν βρέθηκε.")
+            except Exception as e:
+                print(f"[CSV ERROR]: Σφάλμα κατά την ανάγνωση του CSV '{filename}': {e}")
 
 def _prepare_environment(input_filepath):
     """Κοινή προετοιμασία περιβάλλοντος, δεδομένων, common blocks και μαθηματικών."""
@@ -71,6 +137,9 @@ def _prepare_environment(input_filepath):
         
     data_env = yaml.safe_load(data_match.group(1)) or {}
     
+    # Ενσωματωμένη κλήση για φόρτωση CSV
+    process_csv_sources(data_env)
+
     # --- 2. ΥΠΟΛΟΓΙΣΜΟΣ ΑΡΙΘΜΗΤΙΚΩΝ ΠΑΡΑΣΤΑΣΕΩΝ (=...) ---
     data_env = _evaluate_expressions(data_env)
     # ----------------------------------------------------
