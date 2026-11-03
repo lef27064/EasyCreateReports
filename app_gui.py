@@ -39,7 +39,6 @@ class ReportDesignerApp(QMainWindow):
 
         file_menu.addSeparator()
 
-        # Νέα καθαρή επιλογή για την αποθήκευση των HTML και PDF στον δίσκο
         export_action = QAction("🌐 Εξαγωγή HTML Αρχείων & PDF στον δίσκο", self)
         export_action.triggered.connect(self.export_report_files)
         file_menu.addAction(export_action)
@@ -57,6 +56,12 @@ class ReportDesignerApp(QMainWindow):
         btn_data = QPushButton("📋 @data Block")
         btn_table = QPushButton("📊 Πίνακας + ΦΠΑ")
         btn_section = QPushButton("📌 Ενότητα (##)")
+        
+        # --- ΠΡΟΣΘΗΚΗ ΚΟΥΜΠΙΟΥ REFRESH ΓΙΑ ΕΛΕΓΧΟ ΤΩΝ ΔΕΔΟΜΕΝΩΝ ---
+        btn_refresh = QPushButton("🔄 Ανανέωση / Render")
+        btn_refresh.setStyleSheet("background-color: #ffebee; font-weight: bold; padding: 6px; color: #b71c1c;")
+        btn_refresh.setToolTip("Διαβάζει ξανά τα αρχεία (π.χ. CSV) και ενημερώνει την προεπισκόπηση")
+        # -----------------------------------------------------------
 
         btn_data.setStyleSheet("background-color: #e1f5fe; font-weight: bold; padding: 6px;")
         btn_table.setStyleSheet("background-color: #e8f5e9; font-weight: bold; padding: 6px;")
@@ -65,11 +70,14 @@ class ReportDesignerApp(QMainWindow):
         toolbar_layout.addWidget(btn_data)
         toolbar_layout.addWidget(btn_table)
         toolbar_layout.addWidget(btn_section)
+        toolbar_layout.addWidget(btn_refresh)  # Προσθήκη στο layout
+        
         left_layout.addLayout(toolbar_layout)
 
         self.editor = QTextEdit()
         self.editor.setFontFamily("Consolas")
         self.editor.setFontPointSize(11)
+        
         # --- ΕΝΕΡΓΟΠΟΙΗΣΗ ΔΕΞΙΟΥ ΚΛΙΚ ΓΙΑ ΣΥΓΧΡΟΝΙΣΜΟ ---
         self.editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.editor.customContextMenuRequested.connect(self.show_editor_context_menu)
@@ -83,10 +91,13 @@ class ReportDesignerApp(QMainWindow):
         main_splitter.addWidget(self.web_view)
         main_splitter.setSizes([600, 700])
 
+        # Συνδέσεις κουμπιών
         btn_data.clicked.connect(self.insert_data_snippet)
         btn_table.clicked.connect(self.insert_table_snippet)
         btn_section.clicked.connect(self.insert_section_snippet)
-        self.editor.textChanged.connect(self.update_preview)
+        
+        # Σύνδεση του Refresh κουμπιού (Αντί για συνεχές textChanged)
+        btn_refresh.clicked.connect(self.update_preview)
 
         # Φόρτωση document.txt αν υπάρχει
         if os.path.exists("document.txt"):
@@ -130,6 +141,7 @@ tbl_meleti:
 """
         self.editor.setPlainText(default_content)
         self.current_file_path = None
+        self.update_preview()  # Αρχικό render κατά τη φόρτωση
 
     def open_initial_file(self, file_path):
         try:
@@ -138,24 +150,27 @@ tbl_meleti:
             self.editor.setPlainText(content)
             self.current_file_path = file_path
             self.setWindowTitle(f"EasyCreateReports - Visual Template Designer [{os.path.basename(file_path)}]")
+            self.update_preview()  # Render μόλις ανοίξει το αρχείο
         except Exception:
             self.load_default_template()
 
     def update_preview(self):
-        """Ενημερώνει τη ζωντανή προεπισκόπηση στη μνήμη με σωστό Base URL για τις εικόνες."""
+        """Ενημερώνει τη ζωντανή προεπισκόπηση χειροκίνητα (διαβάζει ξανά τα δεδομένα και τα CSV)."""
         raw_text = self.editor.toPlainText()
         temp_path = "_temp_preview.txt"
         try:
             with open(temp_path, 'w', encoding='utf-8') as f:
                 f.write(raw_text)
+            
+            # Εδώ τρέχει η βαριά διαδικασία (επεξεργασία YAML, φόρτωση CSV κ.λπ.)
             html_output = compile_for_preview(temp_path)
             
             base_dir = os.path.dirname(self.current_file_path) if self.current_file_path else os.getcwd()
             base_url = QUrl.fromLocalFile(os.path.abspath(base_dir) + os.path.sep)
             
             self.web_view.setHtml(html_output, base_url)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[PREVIEW ERROR]: {e}")
 
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Άνοιγμα Αρχείου DSL", "", "Text Files (*.txt);;All Files (*)")
@@ -201,7 +216,6 @@ tbl_meleti:
         raw_text = self.editor.toPlainText()
         lines = raw_text.split('\n')
         
-        # Μετράμε πόσες επικεφαλίδες (#) υπάρχουν από την αρχή μέχρι τη γραμμή του κέρσορα
         header_count = 0
         for i in range(min(block_number + 1, len(lines))):
             if lines[i].strip().startswith('#'):
@@ -209,7 +223,6 @@ tbl_meleti:
                 
         target_id_index = max(0, header_count - 1)
         
-        # Εκτέλεση JavaScript στο QWebEngineView για ομαλή κύλιση
         js_code = f"""
         var el = document.getElementById('sec-{target_id_index}');
         if (el) {{

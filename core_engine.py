@@ -25,6 +25,34 @@ def load_styles(css_filepath="styles.css"):
     return "body { font-family: sans-serif; padding: 20px; }"
 
 
+def _preprocess_yaml_expressions(raw_yaml_text, context_vars):
+    """
+    ΣΤΑΔΙΟ 1 (Two-Stage Parsing): Εντοπίζει εκφράσεις τύπου $expr$ μέσα στο @data 
+    και τις υπολογίζει αριθμητικά πριν διαβαστούν από τον YAML parser, 
+    αφήνοντας τα CPV brackets (π.χ. [45343100-4]) εντελώς ανέπαφα.
+    """
+    def replace_expression(match):
+        expr = match.group(1).strip()
+        try:
+            # Αντικατάσταση των μεταβλητών του περιβάλλοντος με τις τιμές τους
+            for key, val in context_vars.items():
+                expr = expr.replace(key, str(val))
+            
+            # Ασφαλής υπολογισμός πράξεων
+            allowed_chars = set("0123456789+-*/.() ")
+            if all(c in allowed_chars for c in expr):
+                result = eval(expr, {"__builtins__": {}}, {})
+                return str(result)
+        except Exception as e:
+            print(f"[PREPROCESSOR ERROR]: Σφάλμα αξιολόγησης έκφρασης '{expr}': {e}")
+        
+        return match.group(0) # Αν αποτύχει, επιστρέφει το αρχικό
+
+    # Regex που ψάχνει αποκλειστικά για περιεχόμενο μέσα σε $...$
+    pattern = r'\$([a-zA-Z0-9_\s\+\-\*/\.\(\)]+)\$'
+    return re.sub(pattern, replace_expression, raw_yaml_text)
+
+
 def _evaluate_expressions(data):
     """Αναδρομική αξιολόγηση αριθμητικών παραστάσεων που ξεκινούν με '=' στο @data."""
     if isinstance(data, dict):
@@ -43,12 +71,11 @@ def _evaluate_expressions(data):
     return data
 
 import csv
-import os
 
 def process_csv_sources(data_env):
     """
     Εντοπίζει στο data_env αν υπάρχουν πίνακες που ορίζονται μέσω csv_source
-    και φορτώνει τα δεδομένα τους αυτόματα στη δομή του πίνακα.
+    και φορτώνει τα δεδομένα τους αυτόματα τη δομή του πίνακα.
     """
     for key, value in list(data_env.items()):
         if isinstance(value, dict) and "csv_source" in value:
@@ -59,46 +86,38 @@ def process_csv_sources(data_env):
             rows = []
             
             try:
-                # Υποθέτουμε ότι το CSV βρίσκεται στον ίδιο φάκελο με το project
                 if os.path.exists(filename):
                     with open(filename, mode="r", encoding="utf-8-sig") as f:
                         reader = csv.reader(f, delimiter=delimiter)
                         all_lines = list(reader)
                         
                         if all_lines:
-                            # Η πρώτη γραμμή είναι οι επικεφαλίδες
                             headers = [h.strip() for h in all_lines[0]]
                             
-                            # Οι επόμενες γραμμές είναι τα δεδομένα
                             for line in all_lines[1:]:
                                 parsed_row = []
                                 for val in line:
                                     val_str = val.strip()
-                                    
-                                    # Αν είναι κενό, το αφήνουμε κενό string
                                     if not val_str:
                                         parsed_row.append("")
                                         continue
-                                        
-                                    # Προσπάθεια αυτόματης μετατροπής σε αριθμό
+                                    
                                     parsed_val = val_str
                                     try:
                                         if "." in val_str or "," in val_str:
-                                            # Αντικατάσταση κόμματος με τελεία για τα δεκαδικά
                                             parsed_val = float(val_str.replace(",", "."))
                                         else:
                                             parsed_val = int(val_str)
                                     except ValueError:
-                                        # Αν δεν είναι αριθμός, δοκιμάζουμε αν είναι καθαρό float με τελεία
                                         try:
                                             parsed_val = float(val_str)
                                         except ValueError:
                                             parsed_val = val_str
                                             
+                                    # ΔΙΟΡΘΩΣΗ: Προστίθεται κανονικά για κάθε κελί
                                     parsed_row.append(parsed_val)
                                 rows.append(parsed_row)
                                 
-                    # Ενημερώνουμε το περιβάλλον δεδομένων με τη μορφή πίνακα που αναγνωρίζει ο engine
                     data_env[key] = {
                         "headers": headers,
                         "rows": rows
@@ -108,7 +127,6 @@ def process_csv_sources(data_env):
                     print(f"[CSV ERROR]: Το αρχείο '{filename}' δεν βρέθηκε.")
             except Exception as e:
                 print(f"[CSV ERROR]: Σφάλμα κατά την ανάγνωση του CSV '{filename}': {e}")
-
 def _prepare_environment(input_filepath):
     """Κοινή προετοιμασία περιβάλλοντος, δεδομένων, common blocks και μαθηματικών."""
     with open(input_filepath, 'r', encoding='utf-8') as f:
@@ -119,7 +137,7 @@ def _prepare_environment(input_filepath):
     clean_lines = []
     for line in lines:
         if line.strip().startswith('//'):
-            continue  # Αγνοούμε τα σχόλια
+            continue  
         clean_lines.append(line)
     content = '\n'.join(clean_lines)
     # ----------------------------------------------------------------
@@ -135,8 +153,22 @@ def _prepare_environment(input_filepath):
     if not data_match:
         raise ValueError("Σφάλμα: Λείπει το απαραίτητο block @data.")
         
-    data_env = yaml.safe_load(data_match.group(1)) or {}
+    # --- ΠΡΩΤΟ ΣΤΑΔΙΟ PARSING: Εξαγωγή βασικών μεταβλητών εκτός πινάκων για pre-evaluation ---
+    # Διαβάζουμε πρώτα τις απλές μεταβλητές ώστε να είναι διαθέσιμες στον preprocessor
+    initial_yaml_text = data_match.group(1)
     
+    # Προσωρινό safe load για να πάρουμε τις σταθερές τιμές (π.χ. proypologismos)
+    try:
+        temp_parsed = yaml.safe_load(initial_yaml_text) or {}
+    except Exception:
+        temp_parsed = {}
+
+    # Εφαρμογή preprocessor στο κείμενο του @data block για τις πράξεις τύπου $var/1.24$
+    preprocessed_data_text = _preprocess_yaml_expressions(initial_yaml_text, temp_parsed)
+
+    # --- ΔΕΥΤΕΡΟ ΣΤΑΔΙΟ PARSING: Κανονικό YAML Loading των καθαρών δεδομένων ---
+    data_env = yaml.safe_load(preprocessed_data_text) or {}
+
     # Ενσωματωμένη κλήση για φόρτωση CSV
     process_csv_sources(data_env)
 
@@ -194,7 +226,6 @@ def _prepare_environment(input_filepath):
     return content, data_env, css_content
 
 
-
 def _process_body_text(body_text, data_env):
     """Επεξεργάζεται το κείμενο σώματος (αντικατάσταση μεταβλητών, πίνακες, markdown)."""
     body_text = body_text.strip()
@@ -205,11 +236,10 @@ def _process_body_text(body_text, data_env):
         decimals_str = match.group(2)
         
         if key not in data_env:
-            return match.group(0)  # Αν δεν βρεθεί η μεταβλητή, την αφήνουμε ως έχει
+            return match.group(0)  
             
         val = data_env[key]
         
-        # Αν έχει δοθεί ρητά ένδειξη δεκαδικών (π.χ. :4 ή :0)
         if decimals_str is not None:
             try:
                 decimals = int(decimals_str)
@@ -217,16 +247,13 @@ def _process_body_text(body_text, data_env):
             except Exception:
                 return str(val)
         else:
-            # Τυπική συμπεριφορά
             if isinstance(val, (int, float)):
                 return data_env["fmt"](val)
             elif isinstance(val, str):
                 return val
             return str(val)
 
-    # Regex που ψάχνει για $key$ ή $key:.decimals$
     body_text = re.sub(r'\$([a-zA-Z0-9_]+)(?::\.([0-9]+))?\$', replace_var, body_text)
-    # ----------------------------------------------------------------------------------
 
     for key, val in data_env.items():
         if isinstance(val, (int, float)):
@@ -266,7 +293,6 @@ def _process_body_text(body_text, data_env):
         if not rows and not orig_headers:
             return f"<!-- Ο πίνακας {tbl_name} δεν βρέθηκε ή είναι κενός -->"
 
-        # --- ΜΗΧΑΝΙΣΜΟΣ SELECT / WHERE & CALCULATIONS ---
         select_match = re.search(r'select="([^"]+)"', content_inside)
         if select_match:
             select_query = select_match.group(1).strip()
@@ -401,10 +427,11 @@ def _process_body_text(body_text, data_env):
         
         for row in rows:
             for i, h in zip(visible_indices, visible_headers):
-                try:
-                    col_sums[h] += float(row[i])
-                except (ValueError, TypeError):
-                    pass
+                if i < len(row):
+                    try:
+                        col_sums[h] += float(row[i])
+                    except (ValueError, TypeError):
+                        pass
 
             visible_row = []
             for idx, (i, h) in enumerate(zip(visible_indices, visible_headers)):
@@ -435,7 +462,6 @@ def _process_body_text(body_text, data_env):
 
             html.append("<tr>" + "".join(f"<td style='padding:6px; text-align:center;'>{c}</td>" for c in visible_row) + "</tr>")
                 
-        # --- ΔΗΜΙΟΥΡΓΙΑ ΕΠΙΠΛΕΟΝ ΓΡΑΜΜΩΝ (Σύνολο, ΦΠΑ, Τελικό) ---
         if column_units:
             colspan = len(visible_headers) - 1
             total_col_key = list(column_units.keys())[0]
@@ -466,7 +492,7 @@ def _process_body_text(body_text, data_env):
         lines = text.split('\n')
         parsed_lines = []
         in_list = False
-        h_index = 0  # Μετρητής για μοναδικά IDs στις επικεφαλίδες
+        h_index = 0  
 
         for line in lines:
             line_str = line.strip()
@@ -495,7 +521,6 @@ def _process_body_text(body_text, data_env):
                     header_content = h_match.group(2)
                     header_content = re.sub(MARKDOWN_RULES['bold']['pattern'], MARKDOWN_RULES['bold']['replacement'], header_content)
                     header_content = re.sub(MARKDOWN_RULES['italic']['pattern'], MARKDOWN_RULES['italic']['replacement'], header_content)
-                    # Προσθήκη μοναδικού id για συγχρονισμό κύλισης
                     parsed_lines.append(f'<h{level} id="sec-{h_index}">{header_content}</h{level}>')
                     h_index += 1
                     continue
@@ -541,7 +566,6 @@ def compile_for_preview(input_filepath):
     """MODE 1: IN-MEMORY (Προεπισκόπηση) - Συγκεντρώνει αποκλειστικά τα @output blocks χωρίς διπλοεγγραφές."""
     content, data_env, css_content = _prepare_environment(input_filepath)
 
-    # Εντοπισμός όλων των @output blocks
     output_blocks = re.findall(r'@output\s*["\']([^"\']+)["\']\s*(.*?)\s*@end', content, re.DOTALL)
     
     if output_blocks:
@@ -550,10 +574,8 @@ def compile_for_preview(input_filepath):
             processed_body = _process_body_text(raw_body, data_env)
             extracted_sections.append(processed_body)
         
-        # Συνένωση των τμημάτων των @output blocks ακριβώς μία φορά
         combined_body = "\n<hr style='margin: 40px 0; border: 1px dashed #ccc;'>\n".join(extracted_sections)
     else:
-        # Fallback: Αν δεν υπάρχουν @output blocks, καθαρίζουμε τα control blocks και παίρνουμε το σώμα
         body_text = content
         body_text = re.sub(r'@config\s*.*?\s*@end', '', body_text, flags=re.DOTALL)
         body_text = re.sub(r'@data\s*.*?\s*@end', '', body_text, flags=re.DOTALL)
@@ -585,6 +607,7 @@ def compile_document(input_filepath):
     output_blocks = re.findall(r'@output\s*["\']([^"\']+)["\']\s*(.*?)\s*@end', content, re.DOTALL)
     
     if not output_blocks:
+        body_match = re.search(r'@body\s*(.*?)$', content, raw_content if 'raw_content' in locals() else content, re.DOTALL) # type: ignore
         body_match = re.search(r'@body\s*(.*?)$', content, re.DOTALL)
         if body_match:
             b_text = body_match.group(1).strip()
